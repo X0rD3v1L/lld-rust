@@ -6,8 +6,7 @@ type DriverId = String;
 struct Delivery {
     start_time: i64,
     end_time: i64,
-    cost: i64,
-    paid: bool
+    paid: bool,
 }
 
 impl Delivery {
@@ -15,17 +14,18 @@ impl Delivery {
         if end_time <= start_time {
             return Err("endTime must be greater than startTime".into());
         }
+        Ok(Self { start_time, end_time, paid: false })
+    }
 
-        Ok(
-            Self { start_time, end_time, cost: end_time - start_time, paid: false }
-        )
+    fn cost(&self) -> i64 {
+        self.end_time - self.start_time
     }
 }
 
 #[derive(Debug)]
 struct Driver {
     id: DriverId,
-    deliveries: Vec<Delivery>
+    deliveries: Vec<Delivery>,
 }
 
 impl Driver {
@@ -42,7 +42,7 @@ impl Driver {
 struct DeliveryCostSystem {
     drivers: HashMap<DriverId, Driver>,
     total_cost: i64,
-    unpaid_cost: i64
+    unpaid_cost: i64,
 }
 
 impl DeliveryCostSystem {
@@ -50,7 +50,7 @@ impl DeliveryCostSystem {
         Self {
             drivers: HashMap::new(),
             total_cost: 0,
-            unpaid_cost: 0
+            unpaid_cost: 0,
         }
     }
 
@@ -73,8 +73,8 @@ impl DeliveryCostSystem {
             .get_mut(driver_id)
             .ok_or("Driver not found")?;
 
-        self.total_cost += delivery.cost;
-        self.unpaid_cost += delivery.cost;
+        self.total_cost += delivery.cost();
+        self.unpaid_cost += delivery.cost();
 
         driver.add_delivery(delivery);
 
@@ -86,7 +86,7 @@ impl DeliveryCostSystem {
             for delivery in &mut driver.deliveries {
                 if !delivery.paid && delivery.end_time <= up_to_time {
                     delivery.paid = true;
-                    self.unpaid_cost -= delivery.cost;
+                    self.unpaid_cost -= delivery.cost();
                 }
             }
         }
@@ -98,6 +98,13 @@ impl DeliveryCostSystem {
 
     fn get_cost_to_be_paid(&self) -> i64 {
         self.unpaid_cost
+    }
+
+    fn driver_costs(&self) -> Vec<(&str, i64)> {
+        self.drivers
+            .values()
+            .map(|d| (d.id.as_str(), d.deliveries.iter().map(|del| del.cost()).sum()))
+            .collect()
     }
 }
 
@@ -112,11 +119,13 @@ fn main() {
     system.add_delivery("driver2", 50, 80).unwrap(); // cost = 30
 
     println!("Total Cost: {}", system.get_total_cost()); // 60
+    println!("Unpaid Cost: {}", system.get_cost_to_be_paid()); // 60
 
-    println!("{}", system.get_cost_to_be_paid()); // 60
+    for (id, cost) in system.driver_costs() {
+        println!("Driver {id}: {cost}");
+    }
 
     system.pay_up_to_time(45);
 
-    println!("{}", system.get_cost_to_be_paid()); // 30
-}   
-
+    println!("Unpaid Cost after settlement: {}", system.get_cost_to_be_paid()); // 30
+}
