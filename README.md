@@ -25,3 +25,4 @@ cargo run -p <problem-name>
 | Problem | Description |
 |---------|-------------|
 | [delivery-cost-tracking-system](problems/delivery-cost-tracking-system) | Track delivery costs per driver with payment settlement |
+| [lru-cache](problems/lru-cache) | LRU cache with O(1) get/put using doubly linked list + hashmap |
