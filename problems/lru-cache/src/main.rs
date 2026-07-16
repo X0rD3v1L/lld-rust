@@ -12,21 +12,14 @@ struct Node {
     next: Option<NodePtr>
 }
 
-struct LRUCache {
-    capacity: usize,
-    map: HashMap<i32, NodePtr>,
+struct DoublyLinkedList {
     head: Option<NodePtr>,
-    tail: Option<NodePtr>
+    tail: Option<NodePtr>,
 }
 
-impl LRUCache {
-    fn new(capacity: i32) -> Self {
-        Self {
-            capacity: capacity as usize,
-            map: HashMap::new(),
-            head: None,
-            tail: None
-        }
+impl DoublyLinkedList {
+    fn new() -> Self {
+        Self { head: None, tail: None }
     }
 
     fn remove(&mut self, node: NodePtr) {
@@ -61,13 +54,29 @@ impl LRUCache {
             self.tail = Some(node);
         }
     }
+}
+
+struct LRUCache {
+    capacity: usize,
+    map: HashMap<i32, NodePtr>,
+    list: DoublyLinkedList,
+}
+
+impl LRUCache {
+    fn new(capacity: i32) -> Self {
+        Self {
+            capacity: capacity as usize,
+            map: HashMap::new(),
+            list: DoublyLinkedList::new(),
+        }
+    }
 
     fn get(&mut self, key: i32) -> i32 {
         if let Some(node) = self.map.get(&key).cloned() {
             let value = node.borrow().value;
 
-            self.remove(node.clone());
-            self.insert_at_head(node);
+            self.list.remove(node.clone());
+            self.list.insert_at_head(node);
 
             value
         } else {
@@ -79,15 +88,15 @@ impl LRUCache {
         if let Some(node) = self.map.get(&key).cloned() {
             node.borrow_mut().value = value;
 
-            self.remove(node.clone());
-            self.insert_at_head(node);
+            self.list.remove(node.clone());
+            self.list.insert_at_head(node);
             return;
         }
 
         if self.map.len() == self.capacity {
-            if let Some(tail) = self.tail.clone() {
+            if let Some(tail) = self.list.tail.clone() {
                 let old_key = tail.borrow().key;
-                self.remove(tail);
+                self.list.remove(tail);
                 self.map.remove(&old_key);
             }
         }
@@ -99,12 +108,12 @@ impl LRUCache {
             next: None,
         }));
 
-        self.insert_at_head(new_node.clone());
+        self.list.insert_at_head(new_node.clone());
         self.map.insert(key, new_node);
     }
 
     fn cache_state(&self) -> String {
-        let mut current = self.head.clone();
+        let mut current = self.list.head.clone();
         let mut parts = Vec::new();
 
         while let Some(node) = current {
